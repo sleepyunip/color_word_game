@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>색깔 맞추기 미니게임</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e8eef5;
+      --muted: #8b9cb3;
+      --accent: #5c9ded;
+      --success: #4caf50;
+      --error: #ef5350;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      touch-action: manipulation;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      background: radial-gradient(ellipse 120% 80% at 50% -20%, #243044 0%, var(--bg) 55%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+        max(28px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      overscroll-behavior-y: contain;
+    }
+
+    h1 {
+      position: relative;
+      z-index: 5;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      position: relative;
+      z-index: 5;
+      color: var(--muted);
+      font-size: clamp(0.8rem, 2.8vw, 0.85rem);
+      margin-bottom: 20px;
+      text-align: center;
+      max-width: min(100%, 360px);
+      padding: 0 4px;
+      line-height: 1.45;
+    }
+
+    .hud {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .badge {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .badge strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .stage-box {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: clamp(20px, 5vw, 28px) clamp(14px, 4vw, 20px) clamp(24px, 6vw, 32px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    .prompt {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 16px;
+    }
+
+    .word {
+      text-align: center;
+      font-size: clamp(2rem, 11vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.2;
+      min-height: 4.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+      user-select: none;
+      transition: transform 0.15s ease;
+    }
+
+    .word.shake {
+      animation: shake 0.35s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+
+    .feedback {
+      text-align: center;
+      min-height: 1.5rem;
+      margin-top: 14px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .feedback.ok {
+      color: var(--success);
+    }
+
+    .feedback.bad {
+      color: var(--error);
+    }
+
+    .buttons {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 92px), 1fr));
+      gap: clamp(8px, 2.5vw, 12px);
+    }
+
+    .btn-color {
+      border: none;
+      border-radius: 12px;
+      min-height: 48px;
+      height: auto;
+      padding: 10px 6px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: clamp(0.72rem, 3.2vw, 0.85rem);
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 12px rgba(0, 0, 0, 0.25);
+      transition: transform 0.08s ease, filter 0.08s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .btn-color:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
+      }
+    }
+
+    .btn-color:active {
+      transform: translateY(1px) scale(0.98);
+      filter: brightness(0.95);
+    }
+
+    .btn-color:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+        max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      background: rgba(10, 14, 20, 0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 40;
+    }
+
+    .overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: clamp(22px, 5vw, 28px) clamp(18px, 4vw, 24px);
+      max-width: 360px;
+      width: 100%;
+      max-height: 88vh;
+      max-height: 88dvh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal h2 {
+      margin: 0 0 10px;
+      font-size: 1.35rem;
+    }
+
+    .modal p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin: 0 0 20px;
+    }
+
+    .modal button {
+      display: block;
+      margin-inline: auto;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      width: 100%;
+      max-width: 280px;
+      min-height: 48px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .modal button:hover {
+        filter: brightness(1.1);
+      }
+    }
+
+    /* 전 색 등장 후: 상단 타이머 + 붉은 압박 오버레이 */
+    body.pressure-on {
+      padding-top: calc(52px + max(0px, env(safe-area-inset-top)));
+    }
+
+    .pressure-hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 25;
+      padding: calc(8px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px
+        max(14px, env(safe-area-inset-left));
+      background: linear-gradient(180deg, rgba(12, 16, 22, 0.95) 0%, rgba(12, 16, 22, 0.55) 100%);
+      border-bottom: 1px solid rgba(255, 80, 80, 0.2);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .pressure-hud[hidden] {
+      display: none !important;
+    }
+
+    .pressure-hud .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .pressure-hud .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #ffb4b4;
+      text-transform: uppercase;
+    }
+
+    .pressure-hud .time {
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+    }
+
+    .pressure-track {
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .pressure-fill {
+      height: 100%;
+      width: 100%;
+      transform-origin: left center;
+      transform: scaleX(1);
+      background: linear-gradient(90deg, #b71c1c, #ff5252, #ffab91);
+      border-radius: 999px;
+    }
+
+    .pressure-tint {
+      position: fixed;
+      inset: 0;
+      z-index: 12;
+      pointer-events: none;
+      opacity: 1;
+    }
+
+    .pressure-tint[hidden] {
+      display: none !important;
+    }
+
+    /* 용암: 아래에서 위로 차오름 (남은 시간과 동기) */
+    .pressure-lava {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .pressure-lava[hidden] {
+      display: none !important;
+    }
+
+    .pressure-lava-inner {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background:
+        radial-gradient(ellipse 80% 40% at 20% 0%, rgba(255, 200, 80, 0.35) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 35% at 75% 5%, rgba(255, 140, 60, 0.4) 0%, transparent 50%),
+        linear-gradient(0deg, #2d0a04 0%, #6b1208 25%, #b71c1c 55%, #ff6f00 82%, rgba(255, 220, 120, 0.55) 100%);
+      box-shadow:
+        0 -12px 48px rgba(255, 90, 0, 0.35),
+        inset 0 24px 60px rgba(255, 255, 200, 0.12);
+      border-radius: 40% 35% 0 0 / 14px 14px 0 0;
+    }
+
+    .pressure-lava-inner::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 18px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.25) 20%,
+        transparent 40%,
+        rgba(255, 255, 255, 0.15) 65%,
+        transparent 100%
+      );
+      opacity: 0.7;
+      filter: blur(2px);
+    }
+  </style>
+</head>
+<body>
+  <div id="pressureLava" class="pressure-lava" hidden aria-hidden="true">
+    <div id="pressureLavaInner" class="pressure-lava-inner"></div>
+  </div>
+
+  <div id="pressureHud" class="pressure-hud" hidden>
+    <div class="row">
+      <span class="label">남은 시간</span>
+      <span id="pressureTimeEl" class="time">0:00</span>
+    </div>
+    <div class="pressure-track" aria-hidden="true">
+      <div id="pressureFill" class="pressure-fill"></div>
+    </div>
+  </div>
+
+  <h1>색깔 맞추기</h1>
+  <p class="sub">단어는 색 이름이지만, 글자 색은 다릅니다.<br /><strong>글자에 칠해진 색</strong>에 맞는 버튼을 누르세요.</p>
+
+  <div class="hud">
+    <span class="badge">스테이지 <strong id="stageEl">1</strong></span>
+    <span class="badge">문제 <strong id="qEl">1</strong> / 5</span>
+    <span class="badge">점수 <strong id="scoreEl">100</strong></span>
+  </div>
+
+  <div class="stage-box">
+    <div class="prompt">아래 글자의 색</div>
+    <div id="wordEl" class="word" aria-live="polite"></div>
+    <div id="feedbackEl" class="feedback" aria-live="polite"></div>
+    <div id="buttonsEl" class="buttons"></div>
+  </div>
+
+  <div id="pressureTint" class="pressure-tint" hidden aria-hidden="true"></div>
+
+  <div id="stageOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="stageTitle">
+    <div class="modal">
+      <h2 id="stageTitle">스테이지 클리어!</h2>
+      <p id="stageMsg">다음 스테이지에서는 선택할 색이 더 많아집니다.</p>
+      <button type="button" id="nextStageBtn">다음 스테이지</button>
+    </div>
+  </div>
+
+  <div id="timeUpOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="timeUpTitle">
+    <div class="modal">
+      <h2 id="timeUpTitle">시간 종료</h2>
+      <p id="timeUpMsg">용암이 화면 끝까지 차오르기 전에 맞춰 보세요.</p>
+      <button type="button" id="timeUpRestartBtn">처음부터 다시</button>
+    </div>
+  </div>
+
+  <div id="gameOverOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+    <div class="modal">
+      <h2 id="gameOverTitle">게임 오버</h2>
+      <p id="gameOverMsg">점수가 0이 되었습니다. 틀릴 때마다 점수가 깎입니다.</p>
+      <button type="button" id="gameOverRestartBtn">처음부터 다시</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      /** @typedef {{ id: string; label: string; hex: string }} ColorDef */
+
+      /** @type {ColorDef[]} */
+      const ALL_COLORS = [
+        { id: "red", label: "빨강", hex: "#e53935" },
+        { id: "blue", label: "파랑", hex: "#1e88e5" },
+        { id: "green", label: "초록", hex: "#43a047" },
+        { id: "yellow", label: "노랑", hex: "#ffdc00" },
+        { id: "purple", label: "보라", hex: "#8e24aa" },
+        { id: "orange", label: "주황", hex: "#e65100" },
+        { id: "pink", label: "분홍", hex: "#ec407a" },
+        { id: "teal", label: "청록", hex: "#00897b" },
+        { id: "brown", label: "갈색", hex: "#6d4c41" },
+      ];
+
+      const QUESTIONS_PER_STAGE = 5;
+      const BASE_PALETTE_SIZE = 3;
+
+      const wordEl = document.getElementById("wordEl");
+      const buttonsEl = document.getElementById("buttonsEl");
+      const feedbackEl = document.getElementById("feedbackEl");
+      const stageEl = document.getElementById("stageEl");
+      const qEl = document.getElementById("qEl");
+      const scoreEl = document.getElementById("scoreEl");
+      const stageOverlay = document.getElementById("stageOverlay");
+      const stageTitle = document.getElementById("stageTitle");
+      const stageMsg = document.getElementById("stageMsg");
+      const nextStageBtn = document.getElementById("nextStageBtn");
+      const pressureHud = document.getElementById("pressureHud");
+      const pressureFill = document.getElementById("pressureFill");
+      const pressureTimeEl = document.getElementById("pressureTimeEl");
+      const pressureTint = document.getElementById("pressureTint");
+      const pressureLava = document.getElementById("pressureLava");
+      const pressureLavaInner = document.getElementById("pressureLavaInner");
+      const timeUpOverlay = document.getElementById("timeUpOverlay");
+      const timeUpRestartBtn = document.getElementById("timeUpRestartBtn");
+      const gameOverOverlay = document.getElementById("gameOverOverlay");
+      const gameOverRestartBtn = document.getElementById("gameOverRestartBtn");
+
+      /** 전 색이 처음 쓰이는 스테이지 번호 — 스테이지마다 색 2개씩 늘 때 */
+      const STAGE_FULL_PALETTE = 1 + Math.ceil((ALL_COLORS.length - BASE_PALETTE_SIZE) / 2);
+      /** 그 다음 스테이지부터 압박 모드 — 첫 압박 스테이지 제한 시간(ms) ≈ 40초 */
+      const PRESSURE_BASE_MS = 40000;
+      /** 압박 스테이지마다 제한 시간이 20% 감소(×0.8), 별도 상·하한 없음 */
+      const PRESSURE_TIME_PER_STAGE_RATIO = 0.8;
+      const INITIAL_SCORE = 100;
+      const WRONG_PENALTY = 10;
+      const CORRECT_SCORE = 10;
+
+      let stage = 1;
+      let questionInStage = 1;
+      let score = INITIAL_SCORE;
+      /** 직전 두 문제에 나온 단어(id) — 같은 단어가 직후 두 판 안에 다시 나오지 않음 */
+      /** @type {string[]} */
+      let recentWordIds = [];
+      /** 직전 두 문제에 나온 잉크 색(id) */
+      /** @type {string[]} */
+      let recentInkIds = [];
+      /** @type {ColorDef[]} */
+      let palette = [];
+      /** @type {ColorDef | null} */
+      let wordMeaning = null;
+      /** @type {ColorDef | null} */
+      let inkColor = null;
+      let locked = false;
+
+      let timerRemainingMs = 0;
+      /** @type {number | null} */
+      let pressureRaf = null;
+      let pressureLastTs = 0;
+      let pressurePaused = false;
+
+      /** @type {AudioContext | null} */
+      let audioCtx = null;
+
+      function getAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
+
+      function playCorrect() {
+        try {
+          const ctx = getAudio();
+          const t0 = ctx.currentTime;
+          [523.25, 659.25].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            g.gain.setValueAtTime(0.0001, t0 + i * 0.08);
+            g.gain.exponentialRampToValueAtTime(0.12, t0 + i * 0.08 + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.08 + 0.18);
+            osc.connect(g).connect(ctx.destination);
+            osc.start(t0 + i * 0.08);
+            osc.stop(t0 + i * 0.08 + 0.2);
+          });
+        } catch (_) {}
+      }
+
+      function playWrong() {
+        try {
+          const ctx = getAudio();
+          const t0 = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(200, t0);
+          osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.38);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.13, t0 + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.42);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + 0.45);
+        } catch (_) {}
+      }
+
+      function playStageAdvance() {
+        try {
+          const ctx = getAudio();
+          const t0 = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(220, t0);
+          osc.frequency.exponentialRampToValueAtTime(880, t0 + 0.25);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.1, t0 + 0.04);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+          osc.connect(g).connect(ctx.destination);
+          osc.start(t0);
+          osc.stop(t0 + 0.38);
+        } catch (_) {}
+      }
+
+      function paletteSizeForStage(s) {
+        return Math.min(ALL_COLORS.length, BASE_PALETTE_SIZE + 2 * (s - 1));
+      }
+
+      /** 전 색이 나온 **다음** 스테이지부터 타이머·용암·붉은 틴트 */
+      function isPressureMode() {
+        return stage > STAGE_FULL_PALETTE;
+      }
+
+      /** 현재 스테이지의 압박 라운드 제한 시간(ms) — 스테이지가 올라갈수록 계속 짧아짐 */
+      function getPressureLimitMs() {
+        if (!isPressureMode()) return PRESSURE_BASE_MS;
+        const idx = stage - STAGE_FULL_PALETTE - 1;
+        const raw = PRESSURE_BASE_MS * Math.pow(PRESSURE_TIME_PER_STAGE_RATIO, idx);
+        return Math.max(1, Math.round(raw));
+      }
+
+      function stopPressureLoop() {
+        if (pressureRaf != null) {
+          cancelAnimationFrame(pressureRaf);
+          pressureRaf = null;
+        }
+        pressureLastTs = 0;
+      }
+
+      function hidePressureUi() {
+        document.body.classList.remove("pressure-on");
+        pressureHud.hidden = true;
+        pressureTint.hidden = true;
+        pressureTint.style.background = "";
+        pressureLava.hidden = true;
+        if (pressureLavaInner) pressureLavaInner.style.height = "0%";
+        stopPressureLoop();
+      }
+
+      function updatePressureVisuals() {
+        const limit = getPressureLimitMs();
+        const t = limit > 0 ? Math.max(0, Math.min(1, timerRemainingMs / limit)) : 0;
+        const danger = 1 - t;
+        const innerClear = (1 - danger) * 72;
+        pressureTint.style.background = `radial-gradient(ellipse 130% 115% at 50% 45%, rgba(255,45,45,0) 0%, rgba(255,45,45,0) ${innerClear}%, rgba(140,0,0,0.5) 70%, rgba(25,0,0,0.94) 100%)`;
+        pressureFill.style.transform = `scaleX(${t})`;
+        const lavaH = (1 - t) * 100;
+        if (pressureLavaInner) pressureLavaInner.style.height = `${lavaH}%`;
+        const displaySec = Math.max(0, Math.ceil(timerRemainingMs / 1000));
+        const m = Math.floor(displaySec / 60);
+        const s = displaySec % 60;
+        pressureTimeEl.textContent = `${m}:${String(s).padStart(2, "0")}`;
+      }
+
+      function isAnyGameModalOpen() {
+        return (
+          timeUpOverlay.classList.contains("show") ||
+          gameOverOverlay.classList.contains("show") ||
+          stageOverlay.classList.contains("show")
+        );
+      }
+
+      function pressureLoop(ts) {
+        if (!isPressureMode()) {
+          hidePressureUi();
+          timerRemainingMs = 0;
+          return;
+        }
+        if (pressurePaused || isAnyGameModalOpen()) {
+          pressureLastTs = 0;
+          pressureRaf = requestAnimationFrame(pressureLoop);
+          return;
+        }
+        if (!pressureLastTs) pressureLastTs = ts;
+        const dt = ts - pressureLastTs;
+        pressureLastTs = ts;
+        timerRemainingMs -= dt;
+        if (timerRemainingMs <= 0) {
+          timerRemainingMs = 0;
+          updatePressureVisuals();
+          onTimeUp();
+          return;
+        }
+        updatePressureVisuals();
+        pressureRaf = requestAnimationFrame(pressureLoop);
+      }
+
+      function startPressureLoop() {
+        if (!isPressureMode() || timeUpOverlay.classList.contains("show") || gameOverOverlay.classList.contains("show"))
+          return;
+        if (pressureRaf != null) return;
+        pressureLastTs = 0;
+        pressureRaf = requestAnimationFrame(pressureLoop);
+      }
+
+      function syncPressureUi() {
+        if (!isPressureMode()) {
+          pressurePaused = false;
+          timerRemainingMs = 0;
+          hidePressureUi();
+          return;
+        }
+        document.body.classList.add("pressure-on");
+        pressureHud.hidden = false;
+        pressureTint.hidden = false;
+        pressureLava.hidden = false;
+        if (timerRemainingMs <= 0) timerRemainingMs = getPressureLimitMs();
+        updatePressureVisuals();
+        if (!pressurePaused) startPressureLoop();
+      }
+
+      function onTimeUp() {
+        stopPressureLoop();
+        hidePressureUi();
+        pressurePaused = true;
+        locked = true;
+        playWrong();
+        timeUpOverlay.classList.add("show");
+        timeUpRestartBtn.focus();
+      }
+
+      function showGameOver() {
+        stopPressureLoop();
+        hidePressureUi();
+        pressurePaused = true;
+        locked = true;
+        gameOverOverlay.classList.add("show");
+        gameOverRestartBtn.focus();
+      }
+
+      function resetFullGame() {
+        timeUpOverlay.classList.remove("show");
+        gameOverOverlay.classList.remove("show");
+        stageOverlay.classList.remove("show");
+        stage = 1;
+        questionInStage = 1;
+        score = INITIAL_SCORE;
+        recentWordIds = [];
+        recentInkIds = [];
+        timerRemainingMs = 0;
+        pressurePaused = false;
+        newRound();
+      }
+
+      function buildPalette(s) {
+        const n = paletteSizeForStage(s);
+        return ALL_COLORS.slice(0, n);
+      }
+
+      function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+      }
+
+      function pushRecent(ids, id, maxLen) {
+        ids.push(id);
+        while (ids.length > maxLen) ids.shift();
+      }
+
+      /** 최근 두 문제에 쓰인 단어는 제외. 불가능하면 직전 한 문제만 제외, 그래도 없으면 전체에서 선택 */
+      function pickWordAvoidingRecent() {
+        let candidates = palette.filter((w) => !recentWordIds.includes(w.id));
+        if (candidates.length === 0 && recentWordIds.length > 0) {
+          const last = recentWordIds[recentWordIds.length - 1];
+          candidates = palette.filter((w) => w.id !== last);
+        }
+        if (candidates.length === 0) candidates = palette.slice();
+        return pickRandom(candidates);
+      }
+
+      /** 최근 두 문제에 쓰인 잉크 색은 제외(단어 의미와 같으면 안 됨). 막히면 완화 */
+      function pickInkAvoidingRecent(wordM) {
+        const base = palette.filter((c) => c.id !== wordM.id);
+        let candidates = base.filter((c) => !recentInkIds.includes(c.id));
+        if (candidates.length === 0 && recentInkIds.length > 0) {
+          const lastInk = recentInkIds[recentInkIds.length - 1];
+          candidates = base.filter((c) => c.id !== lastInk);
+        }
+        if (candidates.length === 0) candidates = base;
+        return pickRandom(candidates);
+      }
+
+      function newRound() {
+        palette = buildPalette(stage);
+        wordMeaning = pickWordAvoidingRecent();
+        inkColor = pickInkAvoidingRecent(wordMeaning);
+
+        pushRecent(recentWordIds, wordMeaning.id, 2);
+        pushRecent(recentInkIds, inkColor.id, 2);
+
+        wordEl.textContent = wordMeaning.label;
+        wordEl.style.color = inkColor.hex;
+        wordEl.style.textShadow =
+          inkColor.id === "yellow"
+            ? "0 0 2px rgba(0,0,0,.75), 0 2px 12px rgba(0,0,0,.5)"
+            : "";
+        feedbackEl.textContent = "";
+        feedbackEl.className = "feedback";
+        locked = false;
+
+        renderButtons();
+        updateHud();
+        syncPressureUi();
+      }
+
+      function renderButtons() {
+        buttonsEl.innerHTML = "";
+        const shuffled = [...palette].sort(() => Math.random() - 0.5);
+        shuffled.forEach((c) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "btn-color";
+          b.textContent = c.label;
+          b.style.background = c.hex;
+          if (c.id === "yellow") {
+            b.style.color = "#1a1a1a";
+            b.style.textShadow = "none";
+          }
+          b.dataset.id = c.id;
+          b.addEventListener("click", () => onPick(c.id));
+          buttonsEl.appendChild(b);
+        });
+      }
+
+      function updateHud() {
+        stageEl.textContent = String(stage);
+        qEl.textContent = String(questionInStage);
+        scoreEl.textContent = String(score);
+      }
+
+      function onPick(id) {
+        if (locked || !inkColor) return;
+        locked = true;
+
+        if (id === inkColor.id) {
+          score += CORRECT_SCORE;
+          playCorrect();
+          feedbackEl.textContent = "정답!";
+          feedbackEl.className = "feedback ok";
+          setTimeout(() => {
+            if (questionInStage >= QUESTIONS_PER_STAGE) {
+              showStageClear();
+            } else {
+              questionInStage += 1;
+              newRound();
+            }
+          }, 450);
+        } else {
+          playWrong();
+          score = Math.max(0, score - WRONG_PENALTY);
+          feedbackEl.textContent =
+            score <= 0
+              ? "점수가 모두 소진되었습니다."
+              : "틀렸습니다! -" + WRONG_PENALTY + "점 · 글자 색을 다시 확인해 보세요.";
+          feedbackEl.className = "feedback bad";
+          wordEl.classList.add("shake");
+          setTimeout(() => wordEl.classList.remove("shake"), 400);
+          updateHud();
+          if (score <= 0) {
+            showGameOver();
+          } else {
+            setTimeout(() => {
+              locked = false;
+            }, 500);
+          }
+          return;
+        }
+        updateHud();
+      }
+
+      function showStageClear() {
+        if (isPressureMode()) pressurePaused = true;
+        const maxed = paletteSizeForStage(stage + 1) >= ALL_COLORS.length;
+        stageTitle.textContent = "스테이지 " + stage + " 클리어!";
+        stageMsg.textContent = maxed
+          ? "모든 색이 등장합니다. 그 다음 스테이지부터는 제한 시간·붉은 화면·아래에서 차오르는 용암이 생기며, 스테이지가 올라갈수록 제한 시간이 20%씩 줄어듭니다."
+          : "다음 스테이지에서는 맞출 색이 두 가지 더 늘어납니다.";
+        stageOverlay.classList.add("show");
+        nextStageBtn.focus();
+      }
+
+      function advanceStage() {
+        playStageAdvance();
+        stageOverlay.classList.remove("show");
+        pressurePaused = false;
+        stage += 1;
+        questionInStage = 1;
+        recentWordIds = [];
+        recentInkIds = [];
+        if (isPressureMode()) {
+          timerRemainingMs = getPressureLimitMs();
+        }
+        newRound();
+      }
+
+      nextStageBtn.addEventListener("click", advanceStage);
+      timeUpRestartBtn.addEventListener("click", resetFullGame);
+      gameOverRestartBtn.addEventListener("click", resetFullGame);
+
+      newRound();
+    })();
+  </script>
+</body>
+</html>
